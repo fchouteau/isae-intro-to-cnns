@@ -13,11 +13,11 @@ revealOptions:
     height: '100%'
 ---
 
-# Deep Learning in Practice
+# Deep Learning for Computer Vision (Intro)
 
-**ISAE-SUPAERO, SDD, 25 Nov. 2024**
+**ISAE-SUPAERO, SDD, 18 Nov. 2025**
 
-Florient CHOUTEAU, Hedwin BONNAVAUD
+Florient CHOUTEAU
 
 <!--v-->
 

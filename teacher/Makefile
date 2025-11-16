@@ -13,9 +13,6 @@ build-slides:
 				--static-dirs static
 	rm ../docs/index.html && mv ../docs/slides.html ../docs/index.html
 
-build-pdf:
-	docker run --rm -t --net=host -v /home/fchouteau/classes/isae-practical-deep-learning/teacher/docs:/slides astefanutti/decktape http://192.168.86.105:1948/slides.md#/ slides.pdf
-
 build-student-notebooks:
 	jupytext --to notebook 0_cnns.py --output ../0_cnns.ipynb
 	jupytext --to notebook 1_hands_on.py --output ../1_hands_on.ipynb
