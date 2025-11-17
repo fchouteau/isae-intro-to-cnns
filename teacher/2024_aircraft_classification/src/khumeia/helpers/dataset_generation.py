@@ -41,7 +41,7 @@ def items_dataset_from_path(path: Optional[Path] = None) -> [SatelliteImage]:
 
     Returns:
     """
-    assert path is not None, "Please set folder variable, likely ${TP_DATA}/raw/trainval/"
+    assert path is not None, "Please set folder variable, likely ${TP_DATA}/usgs/trainval/"
 
     LOGGER.info("Looking in {}".format(path))
     list_images = path.glob("*.jpg")
@@ -73,8 +73,8 @@ def split_dataset(dataset: Dataset, proportion=0.75, shuffle=True) -> (Dataset, 
         shuffle:
 
     Returns:
-
     """
+
     dataset.sorted(key=lambda sat_im: sat_im.image_id)
     if shuffle:
         random.shuffle(dataset.items)

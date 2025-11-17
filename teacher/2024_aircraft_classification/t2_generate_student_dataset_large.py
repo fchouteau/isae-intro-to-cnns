@@ -31,7 +31,7 @@ sys.path = list(set(sys.path))
 
 # %%
 # setup env variable
-raw_data_dir = Path("./data/raw/").resolve()
+raw_data_dir = Path("./data/usgs/").resolve()
 TRAINVAL_DATA_DIR = raw_data_dir / "trainval"
 EVAL_DATA_DIR = raw_data_dir / "eval"
 
