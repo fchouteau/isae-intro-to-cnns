@@ -77,7 +77,10 @@ ax.imshow(grid)
 plt.show()
 
 # %% [markdown]
-# ## Reload your model
+# ## Dense classification with sliding window
+
+# %% [markdown]
+# ### Reload your model
 #
 # - Using the routines detailed in the previous notebook, upload the scripted model corresponding to the best training (don't forget to save it on the other notebooks) then reload the model
 #
@@ -95,7 +98,7 @@ plt.show()
 #         )
 #     )
 
-# %%
+# %% {"editable": true, "slideshow": {"slide_type": ""}}
 import torch.jit
 
 MODEL = torch.jit.load("scripted_model.pt", map_location="cpu")
@@ -129,7 +132,7 @@ image_transforms = transforms.Compose(
 
 
 # %% [markdown]
-# ## Implement the sliding window
+# ### Implement the sliding window
 #
 # Intuitively, it's about applying an aircraft classifier trained on 64x64 pictures of aircraft or "anything else" as a detector.
 #
@@ -166,7 +169,7 @@ def apply_model_on_large_image(
 
 
 # %% [markdown]
-# ## Apply the sliding window on the dataset and visualize results
+# ### Apply the sliding window on the dataset and visualize results
 
 # %%
 k = np.random.randint(eval_tiles.shape[0])
@@ -193,5 +196,164 @@ def plot_results_on_image(image: np.ndarray, results: results):
     plt.show()
 
 
-# %% {"editable": true, "slideshow": {"slide_type": ""}}
+# %%
 plot_results_on_image(image, results)
+
+# %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
+# ## Image segmentation
+#
+# Now we will do the same with our U-Net.
+#
+# Our U-Net is fully convolutional, there are no mathematical constraints on the image size, only memory constraints. But one 256x256 image should fit in RAM :)
+#
+# We can say that the sliding window is "built-in".
+#
+# So instead of doing the sliding window manually, we will just pass the entire image and get the masks
+
+# %%
+from typing import List
+
+import matplotlib
+
+
+def overlay_img_msk(img, msk, color="red"):
+    """Overlay an image with a colored mask"""
+    c = color_to_rgb(color)
+    msk = class_mask_to_color_mask(msk, class_colors=[[0, 0, 0], c])
+    return overlay_img_rgb_msk(img, msk)
+
+
+def overlay_img_prd(img, prd, cmap="viridis"):
+    # Create overlays for ground truth and prediction without threshold
+    cm = plt.get_cmap(cmap)
+    pred_mask = (cm(prd)[:, :, :3] * 255.0).astype(np.uint8)
+
+    # Overlay predicted mask on image
+    pred_overlay = overlay_img_rgb_msk(img, pred_mask)
+
+    return pred_overlay
+
+
+def overlay_img_rgb_msk(img, msk, coefficients=[0.5, 0.5]):
+    """
+    Overlay a raw IMG and its MSK (0.5 * IMG_In_Visible + 0.5 * Msk)
+    Args:
+        img(np.ndarray): Img array (from imread)
+        msk(np.ndarray): RGB mask
+
+    Returns:
+        np.ndarray containing the overlay (it's a copy)
+    """
+    tmp = np.copy(img).astype(np.float32)
+    tmp2 = np.copy(msk).astype(np.float32)
+    if len(tmp2.shape) == 2:
+        idxs = tmp2 != 0.0
+    else:
+        c = tmp2.shape[2]
+        idxs = ~np.all(tmp2 == [0.0 for _ in range(c)], axis=-1)
+
+    tmp[idxs] = coefficients[0] * tmp[idxs] + coefficients[1] * tmp2[idxs]
+    tmp = np.clip(tmp, 0.0, 255.0)
+    tmp = tmp.astype(np.uint8)
+    del tmp2
+
+    return tmp
+
+
+def color_to_rgb(color_str: str):
+    """Convert color name to RGB tuple"""
+    if isinstance(color_str, str):
+        # https://matplotlib.org/3.1.0/gallery/color/named_colors.html
+        color = np.asarray(matplotlib.colors.to_rgb(color_str))
+        color = (255.0 * color).astype(np.uint8)
+        color = tuple([int(c) for c in color])
+        return color
+    else:
+        return color_str
+
+
+def class_mask_to_color_mask(msk: np.ndarray, class_colors: List):
+    """Convert class indices to colored mask"""
+    if len(msk.shape) == 3:
+        msk = msk[:, :, 0]
+    color_mask = np.asarray(class_colors)[msk]
+    return color_mask
+
+
+def color_image_to_class_mask(msk: np.ndarray, class_colors: List):
+    """Convert colored mask to class indices"""
+    h, w = msk.shape[:2]
+    class_mask = np.zeros((h, w)).astype(np.uint8)
+    for cls_index, cls_color in enumerate(class_colors):
+        cls_occ = np.all(msk == cls_color, axis=-1)
+        class_mask[cls_occ] = cls_index + 1
+    return class_mask
+
+
+# %% [markdown]
+# ### Reload your model
+#
+# - Using the routines detailed in the previous notebook, upload the scripted model corresponding to the best training (don't forget to save it on the other notebooks) then reload the model
+#
+# - Find the mean / std of the dataset you trained with to normalize the images !
+
+# %%
+# from google.colab import files
+
+# uploaded = files.upload()
+
+# for fn in uploaded.keys():
+#     print(
+#         'User uploaded file "{name}" with length {length} bytes'.format(
+#             name=fn, length=len(uploaded[fn])
+#         )
+#     )
+
+# %%
+import torch.jit
+
+UNET_MODEL = torch.jit.load("unet_scripted_model.pt", map_location="cpu")
+UNET_MODEL = UNET_MODEL.cpu().eval()
+
+
+# %%
+def apply_unet_model_on_large_image(img: np.ndarray, model: nn.Module):
+    h, w, c = img.shape
+
+    img = image_transforms(img).unsqueeze(0)
+
+    with torch.no_grad():
+        y_pred = model(img)
+        print(y_pred)
+        mask = (y_pred[0, 0].cpu().numpy() > 0.5).astype(np.uint8)
+
+    return mask
+
+
+# %% {"editable": true, "slideshow": {"slide_type": ""}}
+def plot_mask_on_image(image: np.ndarray, mask: np.ndarray):
+
+    color = (0, 255, 0)
+
+    fig, ax = plt.subplots(2, 1, figsize=(20, 10))
+
+    ax[0].imshow(image)
+    ax[1].imshow(overlay_img_msk(image, mask, color="red"))
+
+    plt.show()
+
+
+# %% [markdown]
+# ### Apply segmentation model
+
+# %%
+image = np.copy(eval_tiles[k])
+
+# %%
+mask = apply_unet_model_on_large_image(image, UNET_MODEL)
+
+# %%
+plot_mask_on_image(image, mask)
+
+# %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
+# # Et voilà !

@@ -8,11 +8,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: py312-isae
 #     language: python
-#     name: python3
+#     name: py312-isae
 # ---
 
 # %% [markdown] {"id": "2iUXCk7tC1x5", "editable": true, "slideshow": {"slide_type": ""}}
@@ -59,7 +59,7 @@ import torchinfo
 
 # %% {"id": "XLml82VWC1yK", "editable": true, "slideshow": {"slide_type": ""}}
 # Configuration variables
-TOY_DATASET_URL = "https://storage.googleapis.com/fchouteau-isae-deep-learning/toy_aircraft_dataset_2023.npz"
+TOY_DATASET_URL = "https://storage.googleapis.com/fchouteau-isae-deep-learning/toy_cloud_classification_2025.npz"
 
 # %% [markdown] {"id": "Shmmb50XC1yK", "editable": true, "slideshow": {"slide_type": ""}}
 # ### Image (reminders)
@@ -89,7 +89,7 @@ TOY_DATASET_URL = "https://storage.googleapis.com/fchouteau-isae-deep-learning/t
 # Note:
 # If you get an error with the code below run:
 # ```python
-# !gsutil -m cp -r gs://isae-deep-learning/toy_aircraft_dataset.npz /tmp/storage.googleapis.com/isae-deep-learning/toy_aircraft_dataset.npz
+# !gsutil -m cp -r gs://isae-deep-learning/toy_aircraft_dataset.npz /tmp/storage.googleapis.com/isae-deep-learning/toy_cloud_classification_2025.npz
 # ```
 # in a cell above the cell below
 
@@ -111,7 +111,7 @@ test_labels = toy_dataset["test_labels"]
 #
 # a. What is the dataset size ?
 #
-# b. How many images representing aircrafts ?
+# b. How many images representing cloudy images ?
 #
 # c. How many images representing backgrounds ?
 #
@@ -128,7 +128,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 # %% {"colab": {"base_uri": "https://localhost:8080/"}, "id": "l7wcKYZBC1yU", "outputId": "4068a524-b60a-48ec-f40d-9538e2ea425f", "editable": true, "slideshow": {"slide_type": ""}}
-LABEL_NAMES = ["Not an aircraft", "Aircraft"]
+LABEL_NAMES = ["Clear", "Cloudy"]
 
 print("Labels counts :")
 for l, c, label in zip(*np.unique(trainval_labels, return_counts=True), LABEL_NAMES):
@@ -140,7 +140,7 @@ for l, label in enumerate(LABEL_NAMES):
     )
 
 # %% {"colab": {"base_uri": "https://localhost:8080/"}, "id": "ArvB0PsXC1yW", "outputId": "84db6bb2-22b4-4384-d197-2ddcac18d9fd", "editable": true, "slideshow": {"slide_type": ""}}
-LABEL_NAMES = ["Not an aircraft", "Aircraft"]
+LABEL_NAMES = ["Clear", "Cloudy"]
 
 print("Labels counts :")
 for l, c, label in zip(*np.unique(test_labels, return_counts=True), LABEL_NAMES):
@@ -1137,9 +1137,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 print("Confusion matrix")
 cm = confusion_matrix(y_true, y_pred_classes)
 
-disp = ConfusionMatrixDisplay(
-    confusion_matrix=cm, display_labels=["background", "aircraft"]
-)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["clear", "cloudy"])
 
 disp.plot()
 plt.show()
@@ -1390,6 +1388,18 @@ plt.show()
 # %% {"id": "ej7Jb0SNC1yz", "editable": true, "slideshow": {"slide_type": ""}}
 # do another training and plot our metrics again. Did we change something ?
 
+# %% [markdown]
+# ### Optimizer Changes
+#
+# Change the optimizer from SGD to optim.Adam. Is it better ? 
+#
+# The purpose of these optimizers is to converge more smoothly and avoid local minimas
+#
+# ![adam](https://blog.paperspace.com/content/images/size/w350/2018/06/optimizers7.gif)
+
+# %% {"editable": true, "slideshow": {"slide_type": ""}}
+# modify training loop
+
 # %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
 # ### Best checkpoint
 #
@@ -1403,43 +1413,62 @@ plt.show()
 #
 
 # %% {"editable": true, "slideshow": {"slide_type": ""}}
+# modify training loop
 
-# %% [markdown] {"toc-hr-collapsed": true, "editable": true, "slideshow": {"slide_type": ""}}
-# ## Food for thoughts: Tooling
+# %% [markdown]
+# ## Transfer learning and Model architecture modification
 #
-# To conclude this notebook, reflect on the following,
+# There are no absolute law concerning the structure of your deep Learning model. During the [Deep Learning class](https://github.com/SupaeroDataScience/deep-learning/blob/main/deep/Deep%20Learning.ipynb) you had an overview of existing models
 #
-# You have launched different experiences and obtained different results,
+# You can operate a modification on your structure and observe the effect on final metrics. Of course, remain consistent with credible models, cf Layer Patterns chapter on this "must view" course : http://cs231n.github.io/convolutional-networks/
 #
-# Did you feel the notebook you used was sufficient ? Which tools would you like to have in order to properly run your experiments ? (Quick google search or ask someone) Do they already exist ?
+# See here for an introduction to complex CNNs architectures:
+# https://cs231n.stanford.edu/slides/2024/lecture_6_part_1.pdf
 #
-# ### **Presentation : High level frameworks**
+# <img src="https://theaisummer.com/static/dfad9981c055b1ba1a37fb3d34ccc4d8/a1792/deep-learning-architectures-plot-2018.png" alt="archs" style="width: 400px;"/>
 #
-# <img src="https://raw.githubusercontent.com/pytorch/ignite/master/assets/logo/ignite_logo_mixed.svg" alt="ignite" style="width: 400px;"/>
+# ### Transfer Learning
 #
-# Pytorch ignite is what we call a "high-level library" over pytorch, its objectives is to abstract away most of the boilerplate code for training deep neural network.
+# For usual tasks such as classification or detection, we use "transfer learning":
 #
-# Usually, they make the development process easier by enabling you to focus on what's important instead of writing distributed and optimized training loops and plugging metrics / callbacks. Because we all forgot to call `.backward()` or `.zero_grad()` at least once.
+#     In practice, very few people train an entire Convolutional Network from scratch (with random initialization), because it is relatively rare to have a dataset of sufficient size. Instead, it is common to pretrain a ConvNet on a very large dataset (e.g. ImageNet, which contains 1.2 million images with 1000 categories), and then use the ConvNet either as an initialization or a fixed feature extractor for the task of interest.
+#     
+# Adapt this tutorial to do transfer learning from a network available in torchvision to our use case
 #
-# Here an overview of the high-level libraries available for pytorch,
+# https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 #
-# https://neptune.ai/blog/model-training-libraries-pytorch-ecosystem?utm_source=twitter&utm_medium=tweet&utm_campaign=blog-model-training-libraries-pytorch-ecosystem
+# I advise you to select resnet18
 #
-# Of these, we would like to highlight three of them:
+# The biggest library of pretrained models is available here :
 #
-# - pytorch-ignite, officially sanctioned by the pytorch team (its repo lives at https://pytorch.org/ignite/), which is developped by [someone from Toulouse](https://twitter.com/vfdev_5) - yes there is a member of the pytorch team living in Toulouse, we are not THAT behind in ML/DL :wishful-thinking:
+# https://github.com/rwightman/pytorch-image-models
 #
-# - pytorch-lightning (https://www.pytorchlightning.ai/) which has recently seen its 1.0 milestone and has been developped to a company. It is more "research oriented" that pytorch-ignite, and with a lower abstraction level, but seems to enable more use case.
+# You can also use off the shelf architecture provided by torchvision, for example:
 #
-# - catalyst (https://github.com/catalyst-team/catalyst) 
+# ```python
+# import torchvision.models
 #
-# - skorch (https://github.com/skorch-dev/skorch). This class was previously written in skorch. Skorch mimics the scikit-learn API and allows bridging the two libraries together. It's a bit less powerful but you write much less code than the two libraries above, and if you are very familiar with scikit-learn, it could be very useful for fast prototyping
+# resnet18 = torchvision.models.resnet18(num_classes=2)
+# ```
 #
+# You can also use [transfer learning](https://machinelearningmastery.com/transfer-learning-for-deep-learning/) to "finetune" already trained features on your dataset
 #
-# **Take a look at the [previous class](https://nbviewer.jupyter.org/github/SupaeroDataScience/deep-learning/blob/main/deep/PyTorch%20Ignite.ipynb), the [official examples](https://nbviewer.jupyter.org/github/pytorch/ignite/tree/master/examples/notebooks/) or the [documentation](https://pytorch.org/ignite/) if want to learn about Ignite**
+# You can adapt one of those two tutorials that use either torchvision or timm to take an existing pre-trained CNN and "finetune int" for your data, while training only a few parameters
+#
+# A simple option : [torchvision tutorial](https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html#finetuning-the-convnet)
+#
+# A more advanced library : [timm tutorial](https://rumn.medium.com/part-1-ultimate-guide-to-fine-tuning-in-pytorch-pre-trained-model-and-its-configuration-8990194b71e) 
+#
+# Note that `timm` is a very famous library that stores all the state of the art CNN and Vision Transformer models for your needs
+#
+# **Exercise*** Change your model function for a transfer learning one. Does it improve your performance ?
+#
+# https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
+
+# %%
 
 # %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
-# ## **Optional** exercises to run at home
+# ## Optional exercises to run at home
 #
 # If you're done with this, you can explore a little bit more : Now that we have a nice training loop we can do hyperparameter tuning !
 #
@@ -1464,11 +1493,15 @@ plt.show()
 # **You can try more things**
 
 # %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
-# ### Optimizer Changes
-# Change the optimizer from SGD to optim.Adam. Is it better ? 
-
-# %% {"editable": true, "slideshow": {"slide_type": ""}}
-# HERE
+# ### LR Scheduling
+#
+# Sometimes it's best to reduce the learning rate if you stop improving, or to reduce learning rate at the end of training
+#
+# Tutorial : https://www.deeplearningwizard.com/deep_learning/boosting_models_pytorch/lr_scheduling/#top-basic-learning-rate-schedules
+#
+# - **Modify the train loop to change the learning rate when the validation loss is stagnating**
+#
+# - **Modify the train loop to change the learning rate when the validation loss is stagnating**
 
 # %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
 # ### Batch Normalization
@@ -1537,22 +1570,8 @@ plt.show()
 # %% {"editable": true, "slideshow": {"slide_type": ""}}
 # HERE
 
-# %% [markdown] {"editable": true, "slideshow": {"slide_type": ""}}
-# ### LR Scheduling
-#
-# Sometimes it's best to reduce the learning rate if you stop improving, or to reduce learning rate at the end of training
-#
-# Tutorial : https://www.deeplearningwizard.com/deep_learning/boosting_models_pytorch/lr_scheduling/#top-basic-learning-rate-schedules
-#
-# - **Modify the train loop to change the learning rate when the validation loss is stagnating**
-#
-# - **Modify the train loop to change the learning rate when the validation loss is stagnating**
-
-# %% {"editable": true, "slideshow": {"slide_type": ""}}
-# ...
-
 # %% [markdown]
-# ### How to train neural networks ?
+# ## Food for Thoughts : How to your train neural networks ?
 #
 # You must have noticed that training neural networks depends on a lot of different things : hyperparameters, architectures, data, ...
 #
@@ -1565,5 +1584,39 @@ plt.show()
 # https://cs231n.stanford.edu/slides/2024/lecture_6_part_2.pdf
 #
 # https://karpathy.github.io/2019/04/25/recipe/
+
+# %% [markdown] {"toc-hr-collapsed": true, "editable": true, "slideshow": {"slide_type": ""}}
+# ## Food for thoughts: Tooling
+#
+# To conclude this notebook, reflect on the following,
+#
+# You have launched different experiences and obtained different results,
+#
+# Did you feel the notebook you used was sufficient ? Which tools would you like to have in order to properly run your experiments ? (Quick google search or ask someone) Do they already exist ?
+#
+# ### **Presentation : High level frameworks**
+#
+# <img src="https://raw.githubusercontent.com/pytorch/ignite/master/assets/logo/ignite_logo_mixed.svg" alt="ignite" style="width: 400px;"/>
+#
+# Pytorch ignite is what we call a "high-level library" over pytorch, its objectives is to abstract away most of the boilerplate code for training deep neural network.
+#
+# Usually, they make the development process easier by enabling you to focus on what's important instead of writing distributed and optimized training loops and plugging metrics / callbacks. Because we all forgot to call `.backward()` or `.zero_grad()` at least once.
+#
+# Here an overview of the high-level libraries available for pytorch,
+#
+# https://neptune.ai/blog/model-training-libraries-pytorch-ecosystem?utm_source=twitter&utm_medium=tweet&utm_campaign=blog-model-training-libraries-pytorch-ecosystem
+#
+# Of these, we would like to highlight three of them:
+#
+# - pytorch-ignite, officially sanctioned by the pytorch team (its repo lives at https://pytorch.org/ignite/), which is developped by [someone from Toulouse](https://twitter.com/vfdev_5) - yes there is a member of the pytorch team living in Toulouse, we are not THAT behind in ML/DL :wishful-thinking:
+#
+# - pytorch-lightning (https://www.pytorchlightning.ai/) which has recently seen its 1.0 milestone and has been developped to a company. It is more "research oriented" that pytorch-ignite, and with a lower abstraction level, but seems to enable more use case.
+#
+# - catalyst (https://github.com/catalyst-team/catalyst) 
+#
+# - skorch (https://github.com/skorch-dev/skorch). This class was previously written in skorch. Skorch mimics the scikit-learn API and allows bridging the two libraries together. It's a bit less powerful but you write much less code than the two libraries above, and if you are very familiar with scikit-learn, it could be very useful for fast prototyping
+#
+#
+# **Take a look at the [previous class](https://nbviewer.jupyter.org/github/SupaeroDataScience/deep-learning/blob/main/deep/PyTorch%20Ignite.ipynb), the [official examples](https://nbviewer.jupyter.org/github/pytorch/ignite/tree/master/examples/notebooks/) or the [documentation](https://pytorch.org/ignite/) if want to learn about Ignite**
 
 # %%

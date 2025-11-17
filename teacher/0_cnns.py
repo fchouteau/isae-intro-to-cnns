@@ -7,11 +7,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: py312-isae
 #     language: python
-#     name: python3
+#     name: py312-isae
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -62,6 +62,7 @@ import skimage.data
 from matplotlib import pyplot as plt
 
 # %% editable=true slideshow={"slide_type": ""}
+# Load a standard test image (astronaut) to explore image properties and pixel manipulation
 img = skimage.data.astronaut()
 
 plt.figure(figsize=(5, 5))
@@ -93,6 +94,7 @@ plt.show()
 # don't forget to convert the image type as the image are in unsigned type
 
 # %% tags=["solution"] editable=true slideshow={"slide_type": ""}
+# Convert to float32 to avoid unsigned integer underflow, jet colormap shows differences as colors
 plt.imshow(
     (img[:, :, 0].astype(np.float32) - img[:, :, 1].astype(np.float32)), cmap="jet"
 )
@@ -136,7 +138,27 @@ plt.show()
 #
 # First, let's look at basic filtering over grayscale (1 channel) images. We will slide a filter over H,W spatial dimensions and get the result
 #
-# First, the convolution implementation without depth is quite simple : 
+# First, the convolution implementation without depth is quite simple :
+
+# %% [markdown]
+# #### Understanding the Convolution Algorithm
+#
+# The function below implements a basic 2D convolution from scratch. Here's what it does:
+#
+# **Key Steps:**
+# 1. **Initialize** an output array with reduced dimensions (we lose `k//2` pixels on each side)
+# 2. **Slide** the kernel across the image pixel by pixel
+# 3. **Element-wise multiply** the kernel with the corresponding image patch
+# 4. **Sum** all the multiplied values to get a single output pixel
+# 5. **Clip** values to valid pixel range [0, 255]
+#
+# **Important Notes:**
+# - The kernel size `k` is usually odd (e.g., 3×3, 5×5) so it has a clear center pixel
+# - Without padding, the output is smaller than the input by `2*p` pixels (where `p = k//2`)
+# - This is a "valid" convolution - we only compute where the kernel fully overlaps the image
+# - The nested loops make this slow (real implementations use optimized C/CUDA code)
+#
+# **Practical Tip:** In production, always use library implementations (OpenCV, scipy, PyTorch) which are 100-1000x faster!
 
 # %% editable=true slideshow={"slide_type": ""}
 def convolve(img: np.array, kernel: np.array) -> np.array:
@@ -205,6 +227,21 @@ print(f"after {convolved_img.shape}")
 plt.imshow(convolved_img, cmap="gray")
 plt.show()
 
+# %% [markdown]
+# #### What Just Happened? The Identity Filter Explained
+#
+# The identity filter (center value = 1, all others = 0) **does nothing** - it returns the original image unchanged!
+#
+# **Why is this useful?**
+# - It's a sanity check that our convolution implementation works correctly
+# - It demonstrates that the output pixel is simply a weighted sum of its neighbors
+# - It shows how padding helps preserve image dimensions: without padding we lost 1 pixel per side
+#
+# **The Padding Trade-off:**
+# - **Without padding:** Output is smaller (300×300 → 298×298 for a 3×3 kernel)
+# - **With padding:** Output matches input size, but border pixels are less reliable (they include padded zeros)
+# - In practice, most deep learning frameworks offer "valid" (no padding) and "same" (with padding) options
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Too easy ! Let's try another filter
 #
@@ -236,6 +273,17 @@ plt.show()
 plt.imshow(convolved_img[64:129, 64:128], cmap="gray")
 plt.show()
 
+# %% [markdown]
+# #### The Box Blur Filter - Averaging for Smoothing
+#
+# This filter contains all 1s (normalized by dividing by 9), so each output pixel is the **average of its 3×3 neighborhood**.
+#
+# **Effect:** Smoothing / Blurring
+# - High-frequency details (edges, noise, texture) are reduced
+# - The image becomes "softer" - compare the zoomed regions above!
+# - Each pixel is replaced by the average of itself and its 8 neighbors
+#
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # If we wanted, we could learn the filters in order to do... cat classification !
 #
@@ -244,6 +292,19 @@ plt.show()
 # ![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F2141203%2F99dba888571cd6284b9b59903061aaa4%2Fko001.png?generation=1591783791920610&alt=media)
 #
 # **Takeaway message** : Kernel filtering (convolution) takes its root from classical image processing !
+#
+# **Why are convolutions useful in CNNs?**
+# - **Not directly!** CNNs *learn* their filter values through backpropagation
+# - But understanding hand-crafted filters helps build intuition
+# - Early CNN layers often learn edge detectors (similar to Sobel filters) automatically
+# - Later layers learn more complex patterns built from these simple features
+#
+# **Classical Computer Vision Filters:**
+# - **Blur:** Averaging (shown here), Gaussian blur (weighted averaging)
+# - **Edge Detection:** Sobel, Prewitt, Laplacian filters
+# - **Sharpening:** Emphasizes high-frequency content (opposite of blur)
+#
+# The key insight: CNNs replace manually designed filters with learned ones!
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Convolutions with depth
@@ -254,10 +315,41 @@ plt.show()
 #
 # It's the same as above, except our filter takes all channels of the image as input. So basically a "Convolution" layer is a filter
 
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# **Important**
+# %% [markdown]
+# #### Why Do We Need Convolutions with Depth?
 #
-# In classical image processing, we use the (height, width, channels) convention, however in torch we prefer using (channels, height, width) convention 
+# Real images have **multiple channels** (RGB color images have 3, satellite imagery can have 10+):
+# - **Single-channel convolution** (what we did above) only works on grayscale images
+# - **Multi-channel convolution** processes all channels simultaneously:
+#   - The filter has depth matching the input channels (e.g., 3 for RGB)
+#   - We compute element-wise multiplication across ALL channels
+#   - Then sum everything to produce a SINGLE output pixel
+#
+# **Key Insight:** A 3×3×3 filter on an RGB image:
+# - Has 27 values (3×3 spatial × 3 channels)
+# - Produces 1 output value per position
+# - Captures relationships between color channels (e.g., "red AND green but NOT blue" = yellow detection)
+#
+# **Multiple Output Channels:** CNNs use multiple filters to detect different features:
+# - 64 filters → 64 output channels (feature maps)
+# - Each filter learns to detect a different pattern
+# - This is how CNNs build hierarchical representations!
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# **Important: Tensor Shape Conventions**
+#
+# In classical image processing, we use the **(height, width, channels)** convention (e.g., 512×512×3)
+#
+# However, **PyTorch and most deep learning frameworks use (channels, height, width)** (e.g., 3×512×512)
+#
+# **Why the difference?**
+# - **Computational efficiency:** Memory layout where channels are contiguous is faster for GPU operations
+# - **Consistency:** Batch processing uses (batch, channels, height, width) - keeps related dimensions together
+# - **Convention:** Most DL papers and frameworks adopted channels-first
+#
+# **Practical Impact:** You must transpose images when moving between libraries:
+# - `numpy/scikit-image → PyTorch`: use `.transpose((2, 0, 1))`  # (H,W,C) → (C,H,W)
+# - `PyTorch → matplotlib`: use `.transpose((1, 2, 0))`  # (C,H,W) → (H,W,C) 
 
 # %% editable=true slideshow={"slide_type": ""}
 img = skimage.data.astronaut()
@@ -272,10 +364,34 @@ img.shape
 w = np.random.random((1, 3, 3, 3))
 b = np.random.random((3,))
 
+# %% [markdown]
+# #### Understanding Multi-Channel Convolution Implementation
+#
+# The function below implements a **full convolutional layer** with multiple input/output channels.
+#
+# **Function Signature Breakdown:**
+# - `conv_W`: Filter weights with shape **(output_channels, input_channels, kernel_height, kernel_width)**
+#   - Example: (64, 3, 3, 3) means 64 filters, each looking at 3 input channels with 3×3 spatial size
+# - `conv_b`: Bias terms with shape **(output_channels,)** - one bias per output channel
+# - `data`: Input image with shape **(input_channels, height, width)** - channels-first format!
+#
+# **Algorithm (Triple Nested Loop):**
+# 1. **Outer loop (output_channel):** For each filter (output feature map)
+# 2. **Middle loops (x, y):** For each spatial position in the output
+# 3. **Implicit inner operation:** Extract patch, multiply with filter, sum ALL values
+#
+# **The Math:** For each output pixel at position (x, y) in channel k:
+# ```
+# output[k, x, y] = sum over all (i,j,c): data[c, x+i, y+j] * conv_W[k, c, i, j] + conv_b[k]
+# ```
+# Where c iterates over input channels, and (i,j) iterates over the kernel spatial dimensions.
+#
+# **Computational Cost:** For a 3×3 kernel, RGB input (3 channels), 64 output channels, 224×224 image:
+# - ≈ 64 × 222 × 222 × 3 × 3 × 3 ≈ 850 million multiply-add operations per image!
+# - This is why we need GPUs for deep learning!
+
 # %% editable=true slideshow={"slide_type": ""}
-# You should remember this from the previous class, this is the general implementation of convolutions
-
-
+# This is the general implementation of tensorial convolutions with channels as inputs
 def forward_convolution(conv_W, conv_b, data):
     """
     Compute the output from a convolutional layer given the weights and data.
@@ -344,9 +460,13 @@ plt.show()
 # - https://towardsdatascience.com/intuitively-understanding-convolutions-for-deep-learning-1f6f42faee1
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# ## Convolutional Neural Networks
+# ## Inductive Biases and Convolutional Neural Networks
 #
 # I shamelessly copy pasted code from this excellent class : https://github.com/Atcold/pytorch-Deep-Learning/blob/master/06-convnet.ipynb
+#
+# Here the objective is to get a grasp of the effect of inductive biases (convolution) that respect the structure of the data.
+#
+# We will go deeper into CNNs, pytorch etc. in the next notebook.
 #
 # Remember, an Artificial Neural Network is a stack of 
 #
@@ -365,11 +485,15 @@ plt.show()
 #     - Aggregating over a feature map
 #     - Example : Maximum
 #
+# ANN architecture
+#
 # ![](https://cdn-media-1.freecodecamp.org/images/Dgy6hBvOvAWofkrDM8BclOU3E3C2hqb25qBb)
 #
-# <img src="https://production-media.paperswithcode.com/methods/MaxpoolSample2.png" alt="drawing" width="400"/>
-#
 # Max pooling operations
+#
+# <img src="https://nico-curti.github.io/NumPyNet/NumPyNet/images/maxpool.gif" alt="drawing" width="400"/>
+#
+#
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Why do CNNs works ?
@@ -401,7 +525,7 @@ input_size = 28 * 28  # images are 28x28 pixels
 output_size = 10  # there are 10 classes
 
 train_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(
+    datasets.FashionMNIST(
         "../data",
         train=True,
         download=True,
@@ -414,7 +538,7 @@ train_loader = torch.utils.data.DataLoader(
 )
 
 test_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(
+    datasets.FashionMNIST(
         "../data",
         train=False,
         transform=transforms.Compose(
@@ -444,6 +568,26 @@ def get_n_params(model):
     return np
 
 
+# %% [markdown]
+# Here is a Deep Neural network that you've seen last time
+
+# %% [markdown]
+# #### Fully Connected Neural Network Architecture
+#
+# This is a traditional **dense neural network** where every neuron connects to every neuron in the next layer.
+#
+# **Architecture:**
+# - **Input:** 784 values (28×28 flattened image) - spatial structure is **destroyed**!
+# - **Layer 1:** Linear(784 → n_hidden) + ReLU
+# - **Layer 2:** Linear(n_hidden → n_hidden) + ReLU
+# - **Layer 3:** Linear(n_hidden → 10) + LogSoftmax (for 10 classes)
+#
+# **Key Characteristics:**
+# - **No spatial awareness:** Pixel at position (0,0) and (27,27) are treated identically
+# - **Ignores image structure:** Would work equally well on scrambled pixels (we'll test this!)
+# - **Fully general:** Makes no assumptions about the data structure
+
+# %%
 # Create two models: One ANN vs One CNN
 class FullyConnected2Layers(nn.Module):
     def __init__(self, input_size, n_hidden, output_size):
@@ -463,6 +607,48 @@ class FullyConnected2Layers(nn.Module):
         return self.network(x)
 
 
+# %% [markdown]
+# Here is the equivalent with convolutions operations. We will go deeper on how to write and compute a CNN architecture in the next notebook, so take it for granted for now
+
+# %% [markdown]
+# #### Convolutional Neural Network Architecture - Layer by Layer
+#
+# This CNN **preserves spatial structure** and exploits local patterns through convolutions.
+#
+# **Architecture Breakdown** (for n_feature=6, input 28×28 grayscale):
+#
+# 1. **Conv2d(1→6, kernel=5×5)**: Applies 6 different 5×5 filters
+#    - Input: (1, 28, 28) → Output: (6, 24, 24) - loses 4 pixels without padding
+#    - Learns 6 different feature detectors (edges, corners, textures, etc.)
+#    - Parameters: 6 × (5×5×1 + 1 bias) = 156
+#
+# 2. **ReLU**: Element-wise activation: max(0, x) - introduces non-linearity
+#
+# 3. **MaxPool2d(2)**: Takes max in each 2×2 window, stride 2
+#    - Output: (6, 12, 12) - halves spatial dimensions
+#    - Provides translation invariance and reduces computation
+#
+# 4. **Conv2d(6→6, kernel=5×5)**: Second convolutional layer
+#    - Output: (6, 8, 8)
+#    - Parameters: 6 × (5×5×6 + 1)
+#
+# 5. **ReLU + MaxPool2d(2)**: Same as before → Output: (6, 4, 4)
+#
+# 6. **Flatten**: Reshapes (6, 4, 4) → (96,) - converts to 1D for fully connected layers
+#
+# 7. **Linear(96→50) + ReLU**: Fully connected layer combining spatial features
+#    - Parameters: 96×50 + 50
+#
+# 8. **Linear(50→10) + LogSoftmax**: Output layer for 10 classes
+#    - Parameters: 50×10 + 10
+#
+# **Key Differences from FC Network:**
+# - **Sparse connectivity:** Each neuron only looks at a local region (5×5 patch)
+# - **Parameter sharing:** Same filter is applied across the entire image
+# - **Translation equivariance:** If object moves, feature map shifts accordingly
+# - **Hierarchical features:** Early layers detect edges, later layers detect complex patterns
+
+# %%
 class CNN(nn.Module):
     def __init__(self, input_size, n_feature, output_size):
         super(CNN, self).__init__()
@@ -502,8 +688,62 @@ else:
 print(device)
 
 # %% editable=true slideshow={"slide_type": ""}
+# store training history
 accuracy_list = []
 
+
+# %% [markdown]
+# Here is a pytorch training loop
+
+# %% [markdown]
+# #### Understanding the PyTorch Training Loop
+#
+# The `train()` function implements one epoch of training. Here's the standard deep learning training cycle:
+#
+# **Training Loop Components:**
+#
+# 1. **`model.train()`**: Sets model to training mode
+#    - Enables dropout (if present), batch normalization updates, etc.
+#    - Important: Different behavior than `model.eval()`
+#
+# 2. **Batch Processing Loop**: Iterate over mini-batches from DataLoader
+#    - `enumerate(train_loader)` gives us batches of (data, target)
+#    - Batch size = 64 images at a time (memory efficient)
+#
+# 3. **Move to Device**: `data.to(device)`, `target.to(device)`
+#    - Transfers tensors to GPU/MPS/CPU as configured
+#    - Critical for GPU acceleration!
+#
+# 4. **The Optimization Cycle** (repeated for each batch):
+#
+#    a. **`optimizer.zero_grad()`**: Clear previous gradients
+#       - PyTorch accumulates gradients by default - must reset!
+#       - Forgetting this causes incorrect updates
+#
+#    b. **Forward Pass**: `output = model(data)`
+#       - Run input through network
+#       - Compute predictions
+#
+#    c. **Loss Computation**: `loss = F.nll_loss(output, target)`
+#       - Negative log-likelihood loss for classification
+#       - Measures how wrong the predictions are
+#
+#    d. **`loss.backward()`**: Compute gradients via backpropagation
+#       - Automatic differentiation! PyTorch's magic
+#       - Computes ∂loss/∂weight for every parameter
+#
+#    e. **`optimizer.step()`**: Update weights using gradients
+#       - SGD update: weight = weight - learning_rate × gradient
+#       - With momentum: smooths updates over time
+#
+# **The `perm` Parameter**: Used for pixel permutation experiment (explained later)
+# - Default: `torch.arange(0, 784)` keeps pixels in order
+# - Experiment: Random permutation to test CNN assumptions
+#
+# **Practical Tips:**
+# - Always check loss is decreasing during training
+# - Print progress every N batches to monitor training
+# - If loss is NaN: learning rate too high or numerical instability
 
 # %% editable=true slideshow={"slide_type": ""}
 def train(epoch, model, perm=torch.arange(0, 784).long()):
@@ -565,6 +805,44 @@ def test(model, perm=torch.arange(0, 784).long()):
     )
 
 
+# %% [markdown]
+# #### Understanding the Test/Evaluation Function
+#
+# The `test()` function evaluates model performance on unseen data without updating weights.
+#
+# **Key Differences from Training:**
+#
+# 1. **`model.eval()`**: Sets model to evaluation mode
+#    - Disables dropout (use all neurons)
+#    - Uses running statistics for batch normalization
+#    - No gradient computation needed (saves memory!)
+#
+# 2. **No Gradient Updates**: We only need predictions, not backpropagation
+#    - No `optimizer.zero_grad()`, `loss.backward()`, or `optimizer.step()`
+#    - This makes evaluation much faster
+#
+# 3. **Accumulate Metrics**:
+#    - `test_loss`: Sum of all batch losses (then averaged)
+#    - `correct`: Count of correctly classified samples
+#
+# 4. **Loss Aggregation**: `reduction="sum"`
+#    - Sums loss over all samples (not average per batch)
+#    - Then divide by total samples for mean loss
+#
+# 5. **Prediction Extraction**: `output.data.max(1, keepdim=True)[1]`
+#    - `max(1, ...)`: Find max value along dimension 1 (class dimension)
+#    - `[1]`: Get indices (class labels), not values
+#    - Returns predicted class for each sample
+#
+# 6. **Accuracy Calculation**:
+#    - Compare predictions with ground truth: `pred.eq(target)`
+#    - Sum correct predictions and divide by total samples
+#
+# **Best Practice:** Always evaluate on a held-out test set to detect overfitting!
+# - Training accuracy might be high but test accuracy low → overfitting
+# - Both low → underfitting (need more capacity or training)
+# - Both high → good generalization!
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### CNNs vs Fully Connected Layers
 
@@ -580,9 +858,11 @@ optimizer = optim.SGD(model_fnn.parameters(), lr=0.01, momentum=0.5)
 
 print("Number of parameters: {}".format(get_n_params(model_fnn)))
 
-for epoch in range(0, 1):
+# train for 5 epochs
+for epoch in range(0, 5):
     train(epoch, model_fnn)
-    test(model_fnn)
+# test at end of training
+test(model_fnn)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # A CNN with the same number of parameters
@@ -597,9 +877,10 @@ optimizer = optim.SGD(model_cnn.parameters(), lr=0.01, momentum=0.5)
 
 print("Number of parameters: {}".format(get_n_params(model_cnn)))
 
-for epoch in range(0, 1):
+for epoch in range(0, 5):
     train(epoch, model_cnn)
-    test(model_cnn)
+
+test(model_cnn)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # The ConvNet performs better with the same number of parameters, thanks to its use of prior knowledge about images
@@ -607,12 +888,100 @@ for epoch in range(0, 1):
 #     Use of convolution: Locality and stationarity in images
 #     Pooling: builds in some translation invariance
 
+# %% [markdown]
+# ### What has our CNN learned ?
+#
+# We will plot the filters of our CNN
+
+# %%
+from torchvision import utils
+
+
+def filters_visualisation(filters, ch=0, allkernels=False, nrow=8, padding=1):
+    n, c, w, h = filters.shape
+
+    if allkernels:
+        filters = filters.view(n * c, -1, w, h)
+    elif c != 3:
+        filters = filters[:, ch, :, :].unsqueeze(dim=1)
+
+    rows = np.min((filters.shape[0] // nrow + 1, 64))
+    grid = utils.make_grid(filters, nrow=nrow, normalize=True, padding=padding)
+    plt.figure(figsize=(nrow, rows))
+    plt.imshow(grid.numpy().transpose((1, 2, 0)))
+
+
+print("Filters visualisation")
+for k, module in enumerate(model_cnn.network):
+    if isinstance(module, nn.Conv2d):
+        print(k)
+        filters = module.weight.clone()
+        print(filters.shape)
+        filters_visualisation(filters.cpu(), ch=0, allkernels=True)
+
+        plt.axis("off")
+        plt.ioff()
+        plt.show()
+
+print("Intermediate data visualisation")
+
+for data, target in test_loader:
+    inter = data[:1, :, :, :]
+    print(data.shape)
+    for k, module in enumerate(model_cnn.network):
+        if isinstance(module, nn.Flatten):
+            break
+        inter = inter.to(device)
+        print(k, module.type)
+        inter = module(inter)
+        print(inter.shape)
+        filters_visualisation(inter.cpu(), ch=0, allkernels=True)
+        plt.axis("off")
+        plt.ioff()
+        plt.show()
+
+    break
+
+# %% [markdown]
+# ### Why Does the CNN Win? Understanding Inductive Bias
+#
+# **Inductive Bias** = assumptions built into your model architecture about the problem structure
+#
+# **CNN's Inductive Biases for Images:**
+# 1. **Locality**: Nearby pixels are more related than distant ones
+#    - A 5×5 convolution only looks at a small neighborhood
+#    - Makes sense for images: edges, corners, textures are local patterns
+#
+# 2. **Stationarity/Translation Equivariance**: Patterns can appear anywhere
+#    - Same filter used at every position (parameter sharing)
+#    - A "cat ear" detector works regardless of where the ear appears
+#    - This is why CNNs need far fewer parameters!
+#
+# 3. **Hierarchical Composition**: Complex patterns built from simple ones
+#    - Layer 1: Edges and corners
+#    - Layer 2: Textures and simple shapes
+#    - Layer 3: Object parts (eyes, wheels, wings)
+#    - Layer 4+: Full objects
+#
+# **Fully Connected Network's Inductive Bias:**
+# - Essentially none! Treats all input dimensions as independent
+# - More flexible, but requires more data to learn the same patterns
+# - Can learn anything (universal approximator), but less efficient
+#
+# **The Trade-off:**
+# - **Strong inductive bias (CNN)**: Fast learning, data-efficient, BUT suffers when assumptions break
+# - **Weak inductive bias (FC)**: Flexible, robust to assumption violations, BUT needs more data/parameters
+#
+# Let's test this trade-off with an experiment!
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### What happens when CNNs assumptions are not true ?
 #
 # We will deterministically permute pixels so that the content of an image is respected but not its structure
 #
-# Basically transform some positions into others, so that the spatial relationship between pixels is not respected anymore
+# Basically we transform some positions into others, so that the spatial relationship between pixels is not respected anymore.
+#
+# We transform it the same way everytime so that it's a deterministic transformation, not a random shuffling : If we transform the same image, we will get the same results.
 #
 # And we will train networks on this : A CNN (convolutional) and a ANN (fully connected)
 #
@@ -637,10 +1006,35 @@ for i in range(10):
 # %% [markdown]
 # The figure above demonstrate our "deterministic permutation" : In the 1st two rows, you see the dataset with the structured data (the numbers). In the second dataset, the content is the same but the pixels are "randomly scattered" so there are now structure.
 #
-# Of course the permutation is deterministic, we always permute the pixels the same way, otherwise nothing woul
+# Of course the permutation is deterministic, we always permute the pixels the same way, otherwise nothing would work!
+
+# %% [markdown]
+# #### Understanding the Pixel Permutation Experiment
+#
+# **What we did:**
+# - Created a deterministic permutation: pixel position 0 → position 314, position 1 → position 621, etc.
+# - Applied the SAME permutation to every image consistently
+# - The permutation is random but fixed (not different for each image!)
+#
+# **Why deterministic?**
+# - If we used different random permutations per image, the task becomes impossible
+# - With a fixed permutation, there's still a consistent mapping to learn
+# - The network can still learn "if pixel 314 is bright AND pixel 621 is dark, then class 3"
+#
+# **What's different in the scrambled data?**
+# - **Content preserved**: All the same pixel values exist, just rearranged
+# - **Spatial structure destroyed**: Neighboring pixels in the original are now far apart
+# - **CNN assumptions violated**: Locality no longer valid (nearby pixels in scrambled image are unrelated)
+# - **FC assumptions unchanged**: FC networks don't care about pixel order anyway!
+#
+# **The Hypothesis:**
+# - CNN should perform WORSE on scrambled data (inductive bias doesn't help)
+# - FC should perform the SAME on both (no spatial assumptions to break)
+#
+# Let's see if this hypothesis holds!
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# First, let's train a CNN
+# First, let's train a CNN on the scrambled data
 
 # %% editable=true slideshow={"slide_type": ""}
 # Training settings
@@ -651,12 +1045,13 @@ model_cnn.to(device)
 optimizer = optim.SGD(model_cnn.parameters(), lr=0.01, momentum=0.5)
 print("Number of parameters: {}".format(get_n_params(model_cnn)))
 
-for epoch in range(0, 1):
+for epoch in range(0, 5):
     train(epoch, model_cnn, perm)
-    test(model_cnn, perm)
+
+test(model_cnn, perm)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# Then, a fully connected neural nets
+# Then, a fully connected neural nets on the same scrambled data
 
 # %% editable=true slideshow={"slide_type": ""}
 n_hidden = 8  # number of hidden units
@@ -666,9 +1061,10 @@ model_fnn.to(device)
 optimizer = optim.SGD(model_fnn.parameters(), lr=0.01, momentum=0.5)
 print("Number of parameters: {}".format(get_n_params(model_fnn)))
 
-for epoch in range(0, 1):
+for epoch in range(0, 5):
     train(epoch, model_fnn, perm)
-    test(model_fnn, perm)
+
+test(model_fnn, perm)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Let's now compare the accuracies of 4 neural networks :
@@ -676,7 +1072,55 @@ for epoch in range(0, 1):
 # - FC with image assumption
 # - CNN without image assumption
 # - FC with image assumption
+
+# %% [markdown]
+# #### Interpreting the Results: The Power and Limits of Inductive Bias
 #
+# The bar chart below reveals a fundamental principle in machine learning architecture design.
+#
+# **Expected Results:**
+#
+# 1. **CNN on Normal Data (Highest)**: ~85-90% accuracy
+#    - Assumptions match reality → maximum benefit from inductive bias
+#    - Learns efficiently with few parameters
+#
+# 2. **FC on Normal Data (Good)**: ~75-80% accuracy
+#    - No built-in assumptions, must learn spatial structure from scratch
+#    - Requires more data/parameters to match CNN performance
+#
+# 3. **FC on Scrambled Data (Same as #2)**: ~75-80% accuracy
+#    - **Key insight**: Performance unchanged!
+#    - No spatial assumptions to violate
+#    - Treats pixels as independent features regardless of order
+#
+# 4. **CNN on Scrambled Data (Worst)**: ~60-70% accuracy
+#    - **Critical drop**: Inductive bias now hurts!
+#    - Convolutions assume nearby pixels are related (they're not anymore)
+#    - Parameter sharing means it can't learn independent pixel relationships
+#
+# **The Fundamental Trade-off:**
+#
+# | Architecture | Assumptions | When Good | When Bad |
+# |--------------|-------------|-----------|----------|
+# | **CNN** | Strong spatial priors | Structured grid data (images, audio spectrograms) | Unstructured data, tabular data |
+# | **FC** | No assumptions | Any data type, especially when structure is unknown | Images/sequences (needs more data) |
+#
+# **Practical Takeaways:**
+#
+# 1. **Use CNNs for images** - the inductive bias is almost always helpful
+# 2. **Don't use CNNs for tabular data** - no spatial structure to exploit
+# 3. **Architecture choice encodes assumptions** - choose based on data structure
+# 4. **More assumptions ≠ always better** - assumptions must match reality
+# 5. **Data efficiency**: Right assumptions dramatically reduce data needs
+#
+# **Modern Extensions:**
+# - **Vision Transformers (ViT)**: Less inductive bias than CNNs, needs more data but more flexible
+# - **Graph Neural Networks**: Inductive bias for graph-structured data
+# - **Transformers**: Minimal assumptions, sequence order learned from position embeddings
+#
+# This experiment beautifully demonstrates why **architecture matters** in deep learning!
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # **Takeaway messages**
 #
 # The ConvNet's performance drops when we permute the pixels, but the Fully-Connected Network's performance stays the same

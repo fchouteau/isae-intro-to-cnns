@@ -11,6 +11,7 @@ build-slides:
 	cd docs; reveal-md . \
 				--static ../../docs \
 				--template static/template/reveal.html \
+				--listing-template static/template/listing.html \
 				--static-dirs static
 
 build-student-notebooks:
