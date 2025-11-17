@@ -14,5 +14,6 @@ data
 teacher/saved_models
 teacher/data
 !teacher/src/khumeia/data
+!teacher/2024_aircraft_classification/src/khumeia/data
 
 workspace

@@ -1,5 +1,5 @@
 ---
-title: ISAE Practical Deep Learning Session
+title: Introduction to Convolutional Neural Networks
 theme: evo
 highlightTheme: vs
 separator: <!--s-->
@@ -13,7 +13,8 @@ revealOptions:
     height: '100%'
 ---
 
-# Deep Learning for Computer Vision (Intro)
+# Deep Learning for Computer Vision
+## an introduction
 
 **ISAE-SUPAERO, SDD, 18 Nov. 2025**
 
@@ -25,27 +26,11 @@ Slides : https://fchouteau.github.io/isae-practical-deep-learning/
 
 Notebooks : https://github.com/SupaeroDataScience/deep-learning/tree/main/vision
 
-<!--s-->
-
-## Detect Aircrafts on Satellite Imagery
-
-![ac](static/img/aircrafts.gif)
-
 <!--v-->
 
-6 hours hands on session on applying "deep learning" to a "real" use-case
+6 hours hands-on session to discover deep learning for computer vision
 
 ![dog_cat_meme](static/img/dog_meme.jpg) <!-- .element: height="40%" width="40%" -->
-
-<!--v-->
-<!-- .slide: data-background="http://i.giphy.com/90F8aUepslB84.gif" -->
-
-### RevealJS <!-- .element: style="color: white; font-family: serif; font-size: 1.2em;" -->
-
-These slides are built using <!-- .element: style="color: white; font-family: cursive; font-size: 1.2em;" --> [reveal.js](https://revealjs.com) and [reveal-md](
-https://github.com/webpro/reveal-md)
-
-This is awesome ! 😲 <!-- .element: style="color: white; font-family: cursive; font-size: 1.2em;" -->
 
 <!--v-->
 
@@ -53,179 +38,189 @@ This is awesome ! 😲 <!-- .element: style="color: white; font-family: cursive;
 
 <img src="static/img/ads_logo.jpg" alt="" width="128px" height="128px" style="background:none; border:none; box-shadow:none;"/>
 
-- **Florient CHOUTEAU**, SDD 2016
-- Expert (Staff Engineer) in Artificial Intelligence for Space Systems at **Airbus Defence and Space**
+- **Florient CHOUTEAU**, SDD 2015-2016 🎂
+- eXpert in Artificial Intelligence for Space Systems at **Airbus Defence and Space**
 - Computer Vision Team (Earth Observation, Space Exploration, Space Domain Awareness)
 - Specialized in Satellite Imagery Processing & Deep Learning
 - Daily job revolving around Machine Learning + Satellite Imagery
     - Information extraction
-    - Image processing
+    - **Image processing**
     - Research stuff
 
 Any question ? contact me on slack !
 
-<!--v-->
-
-### Context: Earth Observation
-
-![context](static/img/context.png)  <!-- .element:  width="60%" height="60%"-->
+PS : I also have an internship open ;)
 
 <!--v-->
 
-### Context: DL on Satellite Imagery
+# outcomes
 
-A lot of use cases :
-
-- Land Use / Land Cover cartography
-- Urban Cartography (building, roads, damage assessment...)
-- Various objects detections (ships, vehicles...)
-
-![shipdet](static/img/airbus_ship_det.png) <!-- .element:  width="60%" height="60%"-->
-
-<!--v-->
-
-### Context: DL on Satellite Imagery
-
-Can also be used for "image processing" : 
-
-- Denoising
-- Super Resolution
-
-![](static/img/pneohd.gif) <!-- .element:  width="20%" height="20%"-->
-
-<!--v-->
-
-### Context: Needles in haystacks
-
-![pyramid](static/img/large_pyramid.jpg)  <!-- .element:  width="40%" height="40%"-->
-
-<!--v-->
-
-### What you did last time 
-
-- Trained an ANN & a Convolutional Neural Network on Fashion MNIST
-- Wrote your first training loops with Pytorch
-- Maybe discovered "callbacks" (early stopping), optimizers (sgd, adam), dropout
-- Maybe saw your firsts neural architectures (alexnet, vggs, resnets)
-- Maybe discovered pytorch ignite
-
-<!--v-->
-
-### What we are going to do
-
-Train an aircraft detector on a dataset of aircrafts and "not aircrafts"
-
-- using convolutional neural networks <!-- .element: class="fragment" data-fragment-index="1" -->
-- using pytorch <!-- .element: class="fragment" data-fragment-index="2" -->
-- using google colaboratory and its GPUs <!-- .element: class="fragment" data-fragment-index="3" -->
-
-![colab](static/img/colab.png) <!-- .element:  class="fragment" data-fragment-index="4" width="25%" height="25%"-->
+- how do we use neural networks when we have image ?
+- notions of convolutional neural networks for image classification
+- how we use CNNs to analyse and process (satellite) images
+- hands-on : perfect your torch / deep learning skills
 
 <!--v-->
 
 This is a "hands-on", not a full class
 
-**More resources on DL for Computer Vision**
+**Resources on Deep Learning**
 
-- [http://cs231n.stanford.edu](http://cs231n.stanford.edu/schedule.html)
+- [The Little Book of Deep Learning](https://fleuret.org/francois/lbdl.html)
+
+**Resources on Deep Learning for Computer Vision**
+
+- [Stanford CS231n](http://cs231n.stanford.edu/schedule.html)
+- [M2 MVA](...)
 - [https://d2l.ai/index.html](https://d2l.ai/index.html)
-
 
 <!--s-->
 
-## Session 1: Hands-On
+# Résumé de l'épisode précédent
 
 <!--v-->
 
-### Objectives
+### What you did last time 
 
-- Launch notebooks on Colab
-- Build an intuition over convolutions and CNNs
-- Train a basic CNN on a small training set
-- Plot the metrics & ROC curve on a small test set
-- Discover the world of hyperparameter tuning
+- artificial neural networks (mlp) + backpropagation
+- first training loops in pytorch on fashion mnist "flattened"
+- discovered "callbacks" (early stopping), optimizers (sgd, adam), dropout
 
 <!--v-->
 
-### Outcomes
+> Artificial neural networks are computational graphs (architectures) that comprised of linear operations with parameters (neurons) and non-linear activation functions
 
-- Build an intuition over convolutions and CNNs for image processing
-- Handle a dataset of images, do some basic data exploration
-- Train & evaluate your first CNN on a simple dataset
-- Go beyound accuracy to diagnose your model
-
-<!--v-->
-
-### Dataset description
-
-- 2600 train images (1300 aircrafts, 1300 background), size 64x64
-- 880 test images (440 aircrafts, 440 background), size 64x64
-
-![toy_dataset](static/img/toy_dataset.png) <!-- .element height="40%" width="40%" -->
+![neuron](static/img/neuron.png)  <!-- .element height="50%" width="50%" -->
 
 <!--v--> 
 
-### Pytorch reminder
+> The parameters (also called weights) of these neural networks can be learned with backpropagation. 
+
+![backprop](static/img/backprop.png)  <!-- .element height="50%" width="50%" -->
+
+<!--v--> 
+
+> Deep Learning is the art of training increasingly more complex (deeper) architectures end-to-end with increasingly more data. 
+> 
+> Deep Learning allows hierarchical learning of features adapted to the problem
+
+![neuron](static/img/dl.png)  <!-- .element height="40%" width="40%" -->
+
+<!--v--> 
+
+> Modern tools like pytorch allow you to write and train your architectures without worrying about low-level maths stuff.
+
+![autograd](static/img/1_8rGO7TP6jQkgYXkntcjDAg.jpeg)  <!-- .element height="50%" width="50%" -->
+
+<!--v--> 
+
+Deep Learning is about scale : of data, of compute, of parameters
+
+![scale_data](static/img/scale_all.png)  <!-- .element height="75%" width="75%" -->
+
+<!--v--> 
+
+### Deep Learning, with pytorch
 
 ![pt](static/img/pytorch_1.jpeg)  <!-- .element height="50%" width="50%" -->
 
 <!--v-->
 
-### Pytorch reminder
+### Deep Learning, with pytorch
 
 ![pt](static/img/pytorch_2.jpeg)  <!-- .element height="50%" width="50%" -->
 
 
-<!--v-->
-
-### Let's go ! 
-
-1. Go to google colab
-2. Import the first notebook & follow the guidelines
-3. ...
-4. Profit !
-5. If you're done... go to the next notebook !
-
-<!--v-->
-
-### Colab Guide
-
-<video data-autoplay  controls width="720">
-    <source src="https://storage.googleapis.com/fchouteau-isae-deep-learning/static/colab_guide_proper.mp4" type="video/mp4">
-</video>
-
-<!--v-->
-
-### GPU ???
-
-You'll see that... in February
-
-[Tutorial](http://d2l.ai/chapter_appendix-tools-for-deep-learning/colab.html)
-
 <!--s-->
 
-## Session 1
-## Take-Away messages
+# Neural Networks 
+# for Computer Vision
 
 <!--v-->
 
-### Kernel filtering
+**What to do when you have images ?**
+
+![cat_dog](static/img/1_R-ItxBW2SWarITBKe7HZuA.gif) <!-- .element height="50%" width="50%" -->
+
+<!--v-->
+
+**This could work... but is it efficient ?**
+
+![ann_images](static/img/https_3A_2F_2Fsubstack-post-media.s3.amazonaws.com_2Fpublic_2Fimages_2Fb5df3a91-d391-4991-a3a3-890027ff5e07_3770x2377.png) <!-- .element height="50%" width="50%" -->
+
+<!--v-->
+
+**Convolution (1D)**
+
+![kernel_filtering](static/img/conv1d.gif) <!-- .element height="40%" width="40%" -->
+
+<!--v-->
+
+**Kernel filtering (2D)**
 
 ![kernel_filtering](static/img/kernel_filtering.gif) <!-- .element height="30%" width="30%" -->
+<!--v-->
+
+**Kernel filtering (2D)**
+
+![conv_2d](static/img/how-to-apply-a-2d-convolution-operation-in-pytorch.gif) <!-- .element height="30%" width="30%" -->
 
 <!--v-->
 
-### ConvNets intuition comes from image processing
+**You can hand-craft filters to reach certain effects**
 
-![convolution_filtering](static/img/convolution_filtering.png) <!-- .element height="60%" width="60%" -->
-
-(I apologize for using Lena as an example)
+![convolution_filtering](static/img/0_czWUfPtxU3CTg3SN.png) <!-- .element height="60%" width="60%" -->
 
 <!--v-->
 
-### ConvNets intuition comes from image processing
+**What if we learned the filters ?**
 
 ![convolution](static/img/convolution.gif) <!-- .element height="60%" width="40%" -->
+
+<!--v-->
+
+**from learnable MLPs to learnable convolutions**
+
+![convolution](static/img/conv2d.png) <!-- .element height="50%" width="50%" -->
+
+
+<!--v-->
+
+**from 2d convolutions to tensorial convolutions**
+
+![convolution](static/img/convolution_sliding.gif) <!-- .element height="50%" width="50%" -->
+
+<!--v-->
+
+**Convolutional Neural Networks**
+
+![feature_extraction](static/img/feature_extraction.png)  <!-- .element height="60%" width="60%" -->
+
+<!--v-->
+
+**Convolutions ?**
+
+![cnns](static/img/convolution_sliding.gif)  <!-- .element height="40%" width="40%" -->
+
+[useful link](https://github.com/vdumoulin/conv_arithmetic)
+
+<!--v-->
+
+**Pooling ?**
+
+![mp](static/img/maxpool_animation.gif) <!-- .element height="40%" width="40%" -->
+
+<!--v-->
+
+**nn.Linear ?**
+
+![nn](static/img/nnlinear.png) <!-- .element height="40%" width="40%" -->
+
+<!--v-->
+
+**Computing shape**
+
+![tiles](static/img/cnnshape.png) <!-- .element height="35%" width="35%" -->
 
 <!--v-->
 
@@ -235,41 +230,47 @@ You'll see that... in February
 
 <!--v-->
 
-### ConvNets
+**ConvNets "solved" image classification**
 
-![feature_extraction](static/img/feature_extraction.png)  <!-- .element height="60%" width="60%" -->
+![imagenet](static/img/imagenet-winners-by-year.jpg) <!-- .element height="60%" width="60%" -->
 
-<!--v-->
+<!--s--> 
 
-### Convolutions ?
+## CNN architectures & Transfer Learning
 
-![cnns](static/img/convolution_slinding.gif)  <!-- .element height="40%" width="40%" -->
+<!--v--> 
 
-[useful link](https://github.com/vdumoulin/conv_arithmetic)
-
-<!--v-->
-
-### Pooling ?
-
-![mp](static/img/maxpool_animation.gif) <!-- .element height="40%" width="40%" -->
+How do I know the number of filters, conv etc for my use case ?
 
 <!--v-->
 
-### nn.Linear ?
+[VGG16, 2014](https://arxiv.org/abs/1409.1556)
 
-![nn](static/img/nnlinear.png) <!-- .element height="40%" width="40%" -->
-
-<!--v-->
-
-### Computing shape
-
-![tiles](static/img/cnnshape.png) <!-- .element height="35%" width="35%" -->
+![vgg16](static/img/vgg-16.bak.png) <!-- .element height="60%" width="60%" -->
 
 <!--v-->
 
-### CNNs in practice...
+[Residual Networks (ResNets), 2015](https://arxiv.org/abs/1512.03385)
 
-![tiles](static/img/torchvision.png) <!-- .element height="35%" width="35%" -->
+![resnet](static/img/ResBlock.png) <!-- .element height="60%" width="60%" -->
+
+<!--v-->
+
+![resnet](static/img/1_rOFPhrpfwguotGdB1-BseA.webp) <!-- .element height="50%" width="25%" -->
+
+<!--v-->
+
+🤯
+
+![archs](static/img/deep-learning-architectures-plot-2018.png)
+
+[Well written paper :ConvNext, a ConvNet for the 2020s](https://arxiv.org/abs/2201.03545)
+
+<!--v-->
+
+In practice
+
+![torchvision](static/img/torchvision.png) <!-- .element height="35%" width="35%" -->
 
 ```text
 ResNet(
@@ -357,107 +358,200 @@ ResNet(
   (fc): Linear(in_features=512, out_features=2, bias=True)
 )
 ```
+<!--v-->
+
+Introducing [timm](https://github.com/huggingface/pytorch-image-models)
+
+![timm](static/img/timm.png) <!-- .element height="60%" width="60%" -->
 
 <!--v-->
 
-### ROC-Curves
+Transfer Learning
 
-(see section "extra" on these slides)
+![transfer_learning](static/img/archi.webp) <!-- .element height="60%" width="60%" -->
+
+<!--v-->
+
+Finetuning
+
+![finetuning](static/img/14JZZ6Bh_pJRrYSaArGT1UQ.png) <!-- .element height="60%" width="60%" -->
+- Transfer learning : We take the features as is, and freeze the "encoder's" layers
+- Finetuning : Usually we don't freeze all weights
+
+<!--v-->
+
+### References
+
+- [Understand Convolutional Neural Networks](https://learnopencv.com/understanding-convolutional-neural-networks-cnn/)
+- [Convolution Arithmetics](hub.com/vdumoulin/conv_arithmetic?tab=readme-ov-file)
 
 <!--s-->
 
-## Session 2
-## More complex example
+# Hands-on 1 : CNNs and Classification
 
 <!--v-->
 
 ### Objectives
 
-- **A first take at applied Deep Learning, using pytorch, CNNs and what we previously learned**
-- Train a CNN on a larger & imbalanced dataset
-- Evaluate the performance of a model on imbalanced data
-- Try and improve performance
-- Apply your model on larger images to detect aircrafts
-
-<!--v-->
-
-### Trainval Dataset description
-
-- 91000 64x64 train images
-- 20480 64x64 test images
-- **1/20 aircraft-background ratio**
-
-![tiles](static/img/large_dataset.png) <!-- .element height="35%" width="35%" -->
-
-<!--v-->
-
-### Final Dataset description
-
-- Objective: Apply your classifier on "real" images and find aircrafts
-- 43 512x512 images with some aircrafts
-
-![tiles](static/img/large_tiles.png) <!-- .element height="35%" width="35%" -->
-
-<!--v-->
-
-### One idea: Sliding window
-
-- Training Image Size: 64x64, output = binary classification
-- Target Image Size: 512x512, target = detect & count aircrafts ?
-
-![sliding](static/img/sliding_window.gif)
+- Launch notebooks on Colab
+- Build an intuition over convolutions and CNNs
+- Train a basic CNN on a small training set
+- Plot the metrics & ROC curve on a small test set
+- Discover the world of hyperparameter tuning
 
 <!--v-->
 
 ### Outcomes
 
-- Tackle a dataset with huge class imbalance
-- Discover more advanced techniques for training CNNs
-- Discover Precision-Recall Curves
-- Discover applying models on larger images using the sliding window technique
+- Build an intuition over convolutions and CNNs for image processing
+- Handle a dataset of images, do some basic data exploration
+- Train & evaluate your first CNN on a simple dataset
+- Go beyound accuracy to diagnose your model
 
 <!--v-->
 
-### Steps by steps
+### Context: Earth Observation
 
-1. Start/Restart your machine
-2. Follow notebooks 2 and 3
+![context](static/img/context.png)  <!-- .element:  width="60%" height="60%"-->
 
-![xkcd](https://preview.redd.it/5cjdqxcg07k11.png?auto=webp&s=aff0c7523b10a1e8085177470e1b9276b84296b5)
+<!--v-->
+
+### Context: DL on Satellite Imagery
+
+A lot of use cases :
+
+- Land Use / Land Cover cartography
+- Urban Cartography (building, roads, damage assessment...)
+- Various objects detections (ships, vehicles...)
+
+![shipdet](static/img/airbus_ship_det.png) <!-- .element:  width="60%" height="60%"-->
+
+<!--v-->
+
+### Context: DL on Satellite Imagery
+
+Can also be used for "image processing" : 
+
+- Denoising
+- Super Resolution
+
+![](static/img/pneohd.gif) <!-- .element:  width="20%" height="20%"-->
+
+<!--v-->
+
+### Context: Needles in haystacks
+
+![pyramid](static/img/large_pyramid.jpg)  <!-- .element:  width="40%" height="40%"-->
+
+<!--v-->
+
+### Context: Cloud Detection
+
+![cloud](https://element84.com/wp-content/uploads/2021/02/castellon-clouds-l2a.png)  <!-- .element:  width="40%" height="40%"-->
+
+<!--v-->
+
+### Context: Cloud Detection
+
+![cloud](static/img/hard_cloud.png)  <!-- .element:  width="25%" height="20%"-->
+
+<!--v-->
+
+### Dataset description
+
+- 12800 train images (6400 cloudy, 6400 clear), size 64x64
+- 640 test images (320 cloudy, 320 clear), size 64x64
+
+![toy_dataset](static/img/cloud_samples_classification.png) <!-- .element height="40%" width="40%" -->
+
+<!--v-->
+
+### Dataset description
+
+- 64 big test images (256x256)
+
+![toy_dataset](static/img/cloud_tiles.png) <!-- .element height="40%" width="40%" -->
+
+<!--v-->
+
+### Let's go ! 
+
+- 0_cnns.ipynb : You will get a grasp in image, convolutions and CNNs
+- 1_hands_on.ipynb : Train our first cloud detector using CNNs
+- 2_sliding_window.ipynnb : How to apply our detector to a big satellite image ?
+
+<!--v-->
+
+### Let's go ! 
+
+1. Go to google colab
+2. Import the first notebook & follow the guidelines
+3. ...
+4. Profit !
+5. If you're done... go to the next notebook !
+
+<!--v-->
+
+### Colab Guide
+
+<video data-autoplay  controls width="720">
+    <source src="https://storage.googleapis.com/fchouteau-isae-deep-learning/static/colab_guide_proper.mp4" type="video/mp4">
+</video>
+
+<!--v-->
+
+### GPU ???
+
+![gpu](static/img/gpu.png) <!-- .element height="50%" width="50%" -->
+
+<!--v-->
+
+### GPU ???
+
+![gpu](static/img/nvidia.png) <!-- .element height="50%" width="50%" -->
+
+<!--v-->
+
+### GPU ???
+
+[Tutorial](http://d2l.ai/chapter_appendix-tools-for-deep-learning/colab.html)
 
 <!--s-->
 
-## Session 2: Take-home messages
+## Extra : From CNN to Transformers
 
 <!--v-->
 
-### Objectives
-
-- Continue manipulating CNNs using pytorch
-- Tackle a more realistic dataset
-- Examine what must changes to diagnose your model and improve it
+![ViT](static/img/1_Mt09UTRNbV88dvl8mJ8NzQ.png) <!-- .element height="50%" width="50%" -->
 
 <!--v-->
 
-### At home
+![ViT2](static/img/0_Kbg8INDZDb9RgBFQ.png) <!-- .element height="50%" width="50%" -->
 
-- Continue the notebooks
-- Ask question on chat
-- Look at the Deep Learning classes of [cs231n](http://cs231n.stanford.edu/schedule.html)
+[An Image is Worth 16x16 Words](https://arxiv.org/abs/2010.11929)
 
 <!--v-->
 
-Welcome to the life of a deep learning engineer !
-
-![train](static/img/model_train_img.png)
+![ViT3](static/img/41598_2024_72254_Fig1_HTML.png)  <!-- .element: style="width: 60%; height: 40%"-->
 
 <!--v-->
 
-![data](static/img/tesla.jpg) <!-- .element height="70%" width="70%" -->
+RIP inductive biases
+
+![ViT4](static/img/1_8GPsf622HvOTyEoBGyhYlw.gif)
 
 <!--v-->
 
-![goodbye](https://media.giphy.com/media/lD76yTC5zxZPG/giphy.gif)
+Links
+
+https://lbourdois.github.io/blog/nlp/Transformer/
+https://nlp.seas.harvard.edu/annotated-transformer/
+https://cs231n.stanford.edu/slides/2024/lecture_8.pdf
+
+<!--v-->
+
+[example use case](https://www.picsellia.com/post/are-transformers-replacing-cnns-in-object-detection)
+
 
 <!--s-->
 
@@ -480,7 +574,7 @@ Welcome to the life of a deep learning engineer !
 
 ### The ROC curve (visualized)
 
-![roc](https://raw.githubusercontent.com/dariyasydykova/open_projects/master/ROC_animation/animations/ROC.gif)
+![roc](static/img/ROC.gif)
 
 The shape of an ROC curve changes when a model changes the way it classifies the two outcomes.
 
@@ -488,7 +582,7 @@ The shape of an ROC curve changes when a model changes the way it classifies the
 
 ### How to compute a ROC curve ?
 
-![proc](https://raw.githubusercontent.com/dariyasydykova/open_projects/master/ROC_animation/animations/cutoff.gif)  <!-- .element height="40%" width="40%" -->
+![proc](static/img/cutoff.gif)  <!-- .element height="40%" width="40%" -->
 
 - y_pred = a list of probas, y_true = a list of 0 or 1
 - vertical line : threshold value
@@ -523,7 +617,7 @@ Usually the most important things in imbalanced classification
 
 ### The PR Curve (visualized)
 
-![pr](https://raw.githubusercontent.com/dariyasydykova/open_projects/master/ROC_animation/animations/PR.gif)
+![pr](static/img/PR.gif)
 
 The shape of the precision-recall curve also changes when a model changes the way it classifies the two outcomes.
 
@@ -535,7 +629,7 @@ The shape of the precision-recall curve also changes when a model changes the wa
 - Precision-recall curve is more sensitive to class imbalance than an ROC curve
 - Example: Try computing your FPR on very imbalanced dataset
 
-![prroc](https://raw.githubusercontent.com/dariyasydykova/open_projects/master/ROC_animation/animations/imbalance.gif)  <!-- .element height="50%" width="50%" -->
+![prroc](static/img/imbalance.gif)  <!-- .element height="50%" width="50%" -->
 
 <!--v-->
 
@@ -560,7 +654,7 @@ Readings:
 - pytorch: define your models, autodifferenciation, **but you write the rest**
 - hl library: training loops, callbacks, distribution etc...
 
-![ignite](https://raw.githubusercontent.com/pytorch/ignite/master/assets/ignite_vs_bare_pytorch.png)  <!-- .element height="50%" width="50%" -->
+![ignite](static/img/ignite_vs_bare_pytorch.png)  <!-- .element height="50%" width="50%" -->
 
 <!--v-->
 
@@ -570,7 +664,7 @@ Readings:
 
 <!--v-->
 
-### ![pytorch-ignite](https://raw.githubusercontent.com/pytorch/ignite/master/assets/logo/ignite_logo_mixed.svg) <!-- .element:  width="15%" height="15%"-->
+### ![pytorch-ignite](static/img/ignite_logo_mixed.svg) <!-- .element:  width="15%" height="15%"-->
 
 - [pytorch-ignite](https://github.com/skorch-dev/skorch) : a high-level deep learning library based on top of pytorch
 - Reduce boilerplate code (training loops, early stopping, logging...)
@@ -586,100 +680,3 @@ Readings:
 
 ![](static/img/lightning.jpeg) <!-- .element: style="width: 25%; height: 25%"--> 
 
-<!--s-->
-
-### Extra : From classification to Detection and other use of CNNs for Vision
-
-<!--v-->
-
-We've done image classification that we applied in a sliding window fashion on larger images
-
-![sliding](static/img/sliding_window.gif)
-
-<!--v-->
-
-We can solve other types of tasks with ConvNets
-
-![tasks](static/img/computervision_tasks.png)  <!-- .element: style="width: 60%; height: 40%"--> 
-
-<!--v-->
-
-Image Segmentation
-
-![segmentation](https://s3-us-west-2.amazonaws.com/climate-com/images/encoderdecoder2.png)   <!-- .element: style="width: 60%; height: 40%"-->
-
-<!--v-->
-
-Object Detection (intuition)
-
-![objdet](https://miro.medium.com/max/1400/1*REPHY47zAyzgbNKC6zlvBQ.png)  <!-- .element: style="width: 60%; height: 40%"-->
-
-<!--v-->
-
-Object Detection (in practice)
-
-![objectdetection](https://www.mdpi.com/applsci/applsci-12-01291/article_deploy/html/images/applsci-12-01291-g001.png)   <!-- .element: style="width: 60%; height: 40%"-->
-
-<!--v-->
-
-Instance Segmentation
-
-![instseg](https://production-media.paperswithcode.com/methods/Screen_Shot_2020-05-23_at_7.44.34_PM.png)  <!-- .element: style="width: 60%; height: 40%"-->
-
-
-<!--v-->
-
-To learn more about this, see [this cs231n class](http://cs231n.stanford.edu/slides/2022/lecture_9_jiajun.pdf)
-
-<!--v-->
-
-Keypoint Detection
-
-![keypoint](https://learnopencv.com/wp-content/uploads/2022/10/yolov7-mediapipe-human-pose-detection-feature-1.gif)  <!-- .element: style="width: 60%; height: 40%"-->
-
-<!--v-->
-
-Image Restoration
-
-![DLSS](https://i.ytimg.com/vi/eGHjP9zq53w/maxresdefault.jpg)
-
-<!--v-->
-
-Other keywords that are important for CNN in Computer Vision
-
-- [Self-Supervised Learning](http://cs231n.stanford.edu/slides/2023/lecture_13.pdf)
-- [Vision Transformers](https://www.v7labs.com/blog/vision-transformer-guide)
-- [Generative Adversarial Networks](https://github.com/SupaeroDataScience/deep-learning/tree/main/GAN)
-- [Diffusion Models](http://cs231n.stanford.edu/slides/2023/lecture_15.pdf) (StableDiffusion, MidJourney ...)
-
-<!--s-->
-
-## Extra : From CNN to Transformers
-
-<!--v-->
-
-![AIAYN](https://miro.medium.com/v2/resize:fit:1400/1*Mt09UTRNbV88dvl8mJ8NzQ.png)
-
-<!--v-->
-
-![ViT](https://miro.medium.com/v2/resize:fit:1400/0*brmcPLvJpiQWjZpY)
-
-[An Image is Worth 16x16 Words](https://arxiv.org/abs/2010.11929)
-
-<!--v-->
-
-![vitcnn](https://media.springernature.com/full/springer-static/image/art%3A10.1038%2Fs41598-024-72254-w/MediaObjects/41598_2024_72254_Fig1_HTML.png)  <!-- .element: style="width: 60%; height: 40%"-->
-
-<!--v-->
-
-https://cs231n.stanford.edu/slides/2024/lecture_8.pdf
-
-<!--v-->
-
-[example use case](https://www.picsellia.com/post/are-transformers-replacing-cnns-in-object-detection)
-
-<!--s-->
-
-## Extra : AI for CV, in practice
-
-[ISAE SPAPS 2023-2024 class](https://docs.google.com/presentation/d/10zd65eg0X_aqydggKRvC3s20AXSu3WI9RWWUKJVvfAI/edit?usp=sharing)
