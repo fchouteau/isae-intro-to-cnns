@@ -22,7 +22,7 @@ Florient CHOUTEAU
 
 <!--v-->
 
-Slides : https://fchouteau.github.io/isae-practical-deep-learning/
+Slides : https://fchouteau.github.io/isae-intro-to-cnns
 
 Notebooks : https://github.com/SupaeroDataScience/deep-learning/tree/main/vision
 
