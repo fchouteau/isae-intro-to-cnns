@@ -1,40 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>{{{title}}}</title>
+    {{#absoluteUrl}}
+    <meta property="og:title" content="{{{title}}}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="{{{absoluteUrl}}}/featured-slide.jpg" />
+    <meta property="og:url" content="{{{absoluteUrl}}}" />
+    {{/absoluteUrl}}
+    <link rel="shortcut icon" href="{{{base}}}/favicon.ico" />
+    <link rel="stylesheet" href="{{{base}}}/dist/reset.css" />
+    <link rel="stylesheet" href="{{{base}}}/dist/reveal.css" />
+    <link rel="stylesheet" href="{{{base}}}/static/css/reset.css" />
+    <link rel="stylesheet" href="{{{base}}}/static/css/evo.css" />
+    <!-- <link rel="stylesheet" href="{{{themeUrl}}}" id="theme" /> -->
+    <link rel="stylesheet" href="{{{base}}}{{{highlightThemeUrl}}}" />
 
-  <title>Outils du Big Data / Data Computation</title>
-  {{#absoluteUrl}}
-  <meta property="og:title" content="{{{title}}}" />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="{{{absoluteUrl}}}/featured-slide.jpg" />
-  <meta property="og:url" content="{{{absoluteUrl}}}" />
-  {{/absoluteUrl}}
-  <link rel="shortcut icon" href="{{{base}}}/favicon.ico" />
-  <link rel="stylesheet" href="{{{base}}}/dist/reveal.css" />
-  <!-- <link rel="stylesheet" href="{{{themeUrl}}}" id="theme" /> -->
-  <link rel="stylesheet" href="{{{base}}}{{{highlightThemeUrl}}}" />
-  {{#cssPaths}}
-  <link rel="stylesheet" href="{{{base}}}/{{{.}}}" />
-  {{/cssPaths}}
+    {{#cssPaths}}
+    <link rel="stylesheet" href="{{{.}}}" />
+    {{/cssPaths}} {{#watch}}
 
-  {{#watch}}
-  <script>
-    document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>');
-  </script>
-  {{/watch}}
-</head>
+    <script>
+      document.write(
+        '<script src="http://' +
+          (location.host || 'localhost').split(':')[0] +
+          ':35729/livereload.js?snipver=1"></' +
+          'script>'
+      );
+    </script>
+    {{/watch}}
+  </head>
+  <body>
+  <div class="reveal" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+    <div style="text-align: center;">
+     <ul style="list-style-position: inside; display: inline-block; text-align: left;">
+      {{#files}}
+      <li>
+        <a class="h2" href="{{filePath}}" title="{{title}}">
+          {{#title}}
+            {{.}} ({{filePath}})
+          {{/title}}
+          {{^title}}
+            {{filePath}}
+          {{/title}}
+        </a>
+      </li>
+      {{/files}}
+    </ul>
 
-<body>
-  {{{listing}}}
-  <script>
-    var footer = $('#footer-container').html();
-    $('div.reveal').append(footer);
-    var logo = $('#logo-container').html();
-    $('div.reveal').append(logo);
-  </script>
-</body>
-
+    <p>
+      Last update: {{date}}
+    </p>
+    </div>
+  </div>
+    <!-- <div id="footer-container" style="display:none;"> -->
+    <div id="footer-container">
+        <div id="footer">
+            SDD - CNN & Imagery
+            <br />
+            <a href="https://supaerodatascience.github.io/deep-learning/">https://supaerodatascience.github.io/deep-learning/</a>
+            <br />
+            <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License"
+                    style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a>
+        </div>
+    </div>
+    <div id="logo-container">
+        <div id="logo">
+            <img src="static/img/sdd_logo.png" width="8%">
+        </div>
+    </div>
+    <script src="{{{base}}}/dist/reveal.js"></script>
+  </body>
 </html>
