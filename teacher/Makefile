@@ -52,10 +52,10 @@ build-student-notebooks:
         ../4_sliding_window_unet.ipynb
 
 copy-to-isae-repo:
-	cp ../README.md /Users/fchouteau/repositories/classes/deep-learning/vision/
-	cp ../licence.md /Users/fchouteau/repositories/classes/deep-learning/vision/
-	cp ../0_cnns.ipynb /Users/fchouteau/repositories/classes/deep-learning/vision/
-	cp ../1_hands_on.ipynb /Users/fchouteau/repositories/classes/deep-learning/vision/
-	cp ../2_sliding_window.ipynb /Users/fchouteau/repositories/classes/deep-learning/vision/
-	cp ../3_classification_to_segmentation.ipynb /Users/fchouteau/repositories/classes/deep-learning/vision/
-	cp ../4_sliding_window_unet.ipynb /home/fchouteau/classes/deep-learning/vision/
+	cp ../README.md /Users/fchouteau/repositories/classes/isae-deep-learning/vision
+	cp ../licence.md /Users/fchouteau/repositories/classes/isae-deep-learning/vision
+	cp ../0_cnns.ipynb /Users/fchouteau/repositories/classes/isae-deep-learning/vision
+	cp ../1_hands_on.ipynb /Users/fchouteau/repositories/classes/isae-deep-learning/vision
+	cp ../2_sliding_window.ipynb /Users/fchouteau/repositories/classes/isae-deep-learning/vision
+	cp ../3_classification_to_segmentation.ipynb /Users/fchouteau/repositories/classes/isae-deep-learning/vision
+	cp ../4_sliding_window_unet.ipynb /Users/fchouteau/repositories/classes/isae-deep-learning/vision

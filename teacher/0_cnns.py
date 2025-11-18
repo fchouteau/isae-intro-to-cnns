@@ -923,8 +923,11 @@ for k, module in enumerate(model_cnn.network):
         plt.ioff()
         plt.show()
 
+# %%
 print("Intermediate data visualisation")
-
+i = 0
+m = 5
+print(f"visualising {i}")
 for data, target in test_loader:
     inter = data[:1, :, :, :]
     print(data.shape)
@@ -940,7 +943,8 @@ for data, target in test_loader:
         plt.ioff()
         plt.show()
 
-    break
+    if m > 5:
+        break
 
 # %% [markdown]
 # ### Why Does the CNN Win? Understanding Inductive Bias
@@ -1137,10 +1141,11 @@ plt.bar(
     accuracy_list,
     width=0.4,
 )
-plt.ylim((min(accuracy_list) - 5, 96))
+plt.ylim((min(accuracy_list) - 5, 86))
 plt.ylabel("Accuracy [%]")
 for tick in plt.gca().xaxis.get_major_ticks():
     tick.label1.set_fontsize(10)
-plt.title("Performance comparison");
+plt.title("Performance comparison")
+plt.show()
 
 # %%
